@@ -37,9 +37,7 @@ import org.spongepowered.api.event.cause.Cause;
 import org.spongepowered.api.event.cause.EventContext;
 import org.spongepowered.api.event.message.MessageEvent;
 import org.spongepowered.api.event.network.ServerSideConnectionEvent;
-import org.spongepowered.api.network.RemoteConnection;
 import org.spongepowered.api.network.ServerSideConnection;
-import org.spongepowered.api.profile.GameProfile;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -49,6 +47,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.common.SpongeCommon;
+import org.spongepowered.common.bridge.network.NetworkManagerHolderBridge;
 import org.spongepowered.common.bridge.network.ServerLoginNetHandlerBridge;
 import org.spongepowered.common.text.SpongeTexts;
 
@@ -56,7 +55,7 @@ import java.net.SocketAddress;
 import java.util.Optional;
 
 @Mixin(ServerLoginNetHandler.class)
-public abstract class ServerLoginNetHandlerMixin implements ServerLoginNetHandlerBridge {
+public abstract class ServerLoginNetHandlerMixin implements ServerLoginNetHandlerBridge, NetworkManagerHolderBridge {
 
     @Shadow @Final private static Logger LOGGER;
     @Shadow @Final public NetworkManager networkManager;
@@ -64,6 +63,11 @@ public abstract class ServerLoginNetHandlerMixin implements ServerLoginNetHandle
 
     @Shadow public abstract String getConnectionInfo();
     @Shadow protected abstract com.mojang.authlib.GameProfile getOfflineProfile(com.mojang.authlib.GameProfile profile);
+
+    @Override
+    public NetworkManager bridge$getNetworkManager() {
+        return this.networkManager;
+    }
 
     @Redirect(method = "tryAcceptPlayer",
         at = @At(
@@ -84,7 +88,7 @@ public abstract class ServerLoginNetHandlerMixin implements ServerLoginNetHandle
     }
 
     private void impl$disconnectClient(final Optional<Text> disconnectMessage) {
-        ITextComponent reason;
+        final ITextComponent reason;
         if (disconnectMessage.isPresent()) {
             reason = SpongeTexts.toComponent(disconnectMessage.get());
         } else {
@@ -98,10 +102,9 @@ public abstract class ServerLoginNetHandlerMixin implements ServerLoginNetHandle
         final Text disconnectMessage = Text.of("You are not allowed to log in to this server.");
         // Cause is created directly as we can't access the cause stack manager
         // from off the main thread
+        final Cause cause = Cause.of(EventContext.empty(), this);
         final ServerSideConnectionEvent.Auth event = SpongeEventFactory.createServerSideConnectionEventAuth(
-                Cause.of(EventContext.empty(), this.loginGameProfile), (ServerSideConnection) this.networkManager,
-                new MessageEvent.MessageFormatter(disconnectMessage), false
-        );
+                cause, (ServerSideConnection) this, new MessageEvent.MessageFormatter(disconnectMessage), false);
         SpongeCommon.postEvent(event);
         if (event.isCancelled()) {
             this.impl$disconnectClient(event.isMessageCancelled() ? Optional.empty() : Optional.of(event.getMessage()));

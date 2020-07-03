@@ -9,6 +9,9 @@
     "server": [
     ],
     "mixins": [
+        "client.network.login.ClientLoginNetHandlerAccessor",
+        "client.network.play.ClientPlayNetHandlerAccessor",
+        "network.login.ServerLoginNetHandlerAccessor",
         "server.MinecraftServerAccessor_Vanilla",
         "world.storage.SaveFormatAccessor_Vanilla"
     ],

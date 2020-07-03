@@ -41,6 +41,7 @@ import net.minecraft.nbt.ListNBT;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.world.GameRules;
+import org.spongepowered.api.ResourceKey;
 import org.spongepowered.api.block.BlockState;
 import org.spongepowered.api.block.BlockTypes;
 import org.spongepowered.api.data.persistence.DataContentUpdater;
@@ -1449,5 +1450,33 @@ public final class Constants {
                     return Axis.X;
             }
         }
+    }
+
+    public static final class Channels {
+
+        /**
+         * The transaction id of a "normal" payload packet during the login phase.
+         */
+        public static final int LOGIN_PAYLOAD_TRANSACTION_ID = Integer.MAX_VALUE;
+
+        /**
+         * The transaction id of a "normal" payload packet response during the login phase. Can always be ignored.
+         */
+        public static final int LOGIN_PAYLOAD_IGNORED_TRANSACTION_ID = Integer.MAX_VALUE - 1;
+
+        /**
+         * A channel Forge uses to wrap custom login packets in.
+         */
+        public static final ResourceKey FML_LOGIN_WRAPPER_CHANNEL = ResourceKey.of("fml", "loginwrapper");
+
+        /**
+         * A minecraft channel used to register channels keys.
+         */
+        public static final ResourceKey REGISTER_KEY = ResourceKey.minecraft("register");
+
+        /**
+         * A minecraft channel used to unregister channels keys.
+         */
+        public static final ResourceKey UNREGISTER_KEY = ResourceKey.minecraft("unregister");
     }
 }

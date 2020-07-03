@@ -22,52 +22,55 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.common.mixin.api.mcp.network;
+package org.spongepowered.common.mixin.api.mcp.network.login;
 
-import io.netty.channel.SimpleChannelInboundHandler;
-import net.minecraft.network.INetHandler;
+import static java.util.Objects.requireNonNull;
+
 import net.minecraft.network.NetworkManager;
-import net.minecraft.network.play.ServerPlayNetHandler;
-import org.spongepowered.api.entity.living.player.Player;
-import org.spongepowered.api.entity.living.player.server.ServerPlayer;
-import org.spongepowered.api.network.PlayerConnection;
-import org.spongepowered.api.network.ServerPlayerConnection;
+import net.minecraft.network.login.ServerLoginNetHandler;
+import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.TranslationTextComponent;
+import org.spongepowered.api.network.ServerSideConnection;
+import org.spongepowered.api.profile.GameProfile;
+import org.spongepowered.api.text.Text;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.common.bridge.network.NetworkManagerBridge;
+import org.spongepowered.common.text.SpongeTexts;
 
 import java.net.InetSocketAddress;
 
-@SuppressWarnings("rawtypes")
-@Mixin(NetworkManager.class)
-public abstract class NetworkManagerMixin_API extends SimpleChannelInboundHandler implements ServerPlayerConnection {
+@Mixin(ServerLoginNetHandler.class)
+public abstract class ServerLoginNetHandlerMixin_API implements ServerSideConnection {
 
-    @Shadow private INetHandler packetListener;
+    @Shadow @Final public NetworkManager networkManager;
+    @Shadow private com.mojang.authlib.GameProfile loginGameProfile;
+    @Shadow public abstract void shadow$disconnect(ITextComponent reason);
 
     @Override
-    public ServerPlayer getPlayer() {
-        if(this.packetListener instanceof ServerPlayNetHandler) {
-            return (ServerPlayer) ((ServerPlayNetHandler) this.packetListener).player;
-        }
-        throw new IllegalStateException("Player is not currently available");
+    public GameProfile getProfile() {
+        return (GameProfile) this.loginGameProfile;
     }
 
     @Override
-    public int getLatency() {
-        if(this.packetListener instanceof ServerPlayNetHandler) {
-            return ((ServerPlayNetHandler) this.packetListener).player.ping;
-        }
-        throw new IllegalStateException("Latency is not currently available");
+    public void close() {
+        this.shadow$disconnect(new TranslationTextComponent("disconnect.disconnected"));
     }
 
+    @Override
+    public void close(Text reason) {
+        requireNonNull(reason, "reason");
+        this.shadow$disconnect(SpongeTexts.toComponent(reason));
+    }
 
     @Override
     public InetSocketAddress getAddress() {
-        return ((NetworkManagerBridge) this).bridge$getAddress();
+        return ((NetworkManagerBridge) this.networkManager).bridge$getAddress();
     }
 
     @Override
     public InetSocketAddress getVirtualHost() {
-        return ((NetworkManagerBridge) this).bridge$getVirtualHost();
+        return ((NetworkManagerBridge) this.networkManager).bridge$getVirtualHost();
     }
 }

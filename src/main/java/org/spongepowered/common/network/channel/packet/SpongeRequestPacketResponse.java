@@ -22,42 +22,40 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.common.inject.provider;
+package org.spongepowered.common.network.channel.packet;
 
-import com.google.inject.Inject;
-import com.google.inject.Provider;
-import org.spongepowered.api.network.ChannelBinding;
-import org.spongepowered.api.network.ChannelId;
-import org.spongepowered.api.network.ChannelRegistrar;
-import org.spongepowered.api.plugin.PluginContainer;
-import org.spongepowered.common.inject.SpongeInjectionPoint;
+import org.spongepowered.api.network.channel.ChannelException;
+import org.spongepowered.api.network.channel.packet.Packet;
+import org.spongepowered.api.network.channel.packet.RequestPacketResponse;
 
-public abstract class ChannelBindingProvider<B extends ChannelBinding> implements Provider<B> {
+import java.util.Objects;
 
-    @Inject ChannelRegistrar registrar;
-    @Inject PluginContainer container;
-    @Inject private Provider<SpongeInjectionPoint> point;
+public abstract class SpongeRequestPacketResponse<R extends Packet> implements RequestPacketResponse<R> {
 
-    final String getChannel() {
-        return this.point.get().getAnnotation(ChannelId.class).value();
-    }
+    private boolean completed;
 
-    public static class Indexed extends ChannelBindingProvider<ChannelBinding.IndexedMessageChannel> {
-
-        @Override
-        public ChannelBinding.IndexedMessageChannel get() {
-            return this.registrar.getOrCreate(this.container, this.getChannel());
+    private void checkCompleted() {
+        if (this.completed) {
+            throw new IllegalStateException("The request response was already completed.");
         }
-
+        this.completed = true;
     }
 
-    public static class Raw extends ChannelBindingProvider<ChannelBinding.RawDataChannel> {
-
-        @Override
-        public ChannelBinding.RawDataChannel get() {
-            return this.registrar.getOrCreateRaw(this.container, this.getChannel());
-        }
-
+    @Override
+    public void fail(final ChannelException exception) {
+        Objects.requireNonNull(exception, "exception");
+        this.checkCompleted();
+        this.fail0(exception);
     }
 
+    protected abstract void fail0(ChannelException exception);
+
+    @Override
+    public void success(final R response) {
+        Objects.requireNonNull(response, "response");
+        this.checkCompleted();
+        this.success0(response);
+    }
+
+    protected abstract void success0(R response);
 }
